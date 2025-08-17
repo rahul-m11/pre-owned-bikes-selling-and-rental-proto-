@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bike Hub</title>
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel to transpile JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Google Fonts for a nicer look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Basic CSS Reset and Body Styles */
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* Dark background */
+            color: #f3f4f6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        #root {
+            max-width: 450px; /* Simulate mobile screen width */
+            margin: auto;
+            background-color: #1f2937; /* Dark gray content background */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        /* Hide scrollbar for a cleaner look */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      // --- ICONS (Using simple text/emoji as placeholders for SVG icons) ---
+      const SearchIcon = () => <span style={styles.icon}>🔍</span>;
+      const HomeIcon = () => <span style={styles.navIcon}>🏍️</span>;
+      const ChatIcon = () => <span style={styles.navIcon}>💬</span>;
+      const StarIcon = ({ count }) => (
+          <div style={{ position: 'relative' }}>
+              <span style={styles.navIcon}>⭐</span>
+              {count > 0 && <span style={styles.cartBadge}>{count}</span>}
+          </div>
+      );
+      const LeaderboardIcon = () => <span style={styles.navIcon}>🏆</span>;
+      const ProfileIcon = () => <span style={styles.navIcon}>👤</span>;
+      const BackIcon = () => <span style={styles.icon}>⬅️</span>;
+      const SendIcon = () => <span style={styles.icon}>➡️</span>;
+      const CameraIcon = () => <span style={{fontSize: '50px'}}>📷</span>;
+
+      // --- MOCK DATA ---
+      const MOCK_BIKES_DATA = {
+        forSale: {
+            cruisers: [
+              { id: 'c1', brand: 'Royal Enfield', model: 'Classic 350', year: 2021, kmsDriven: 8500, price: 190000, image: 'https://placehold.co/400x400/78716c/ffffff?text=Classic+350', description: 'Well-maintained Classic 350 with dual-channel ABS. All services done at authorized centers.', sellerId: 'o1' },
+              { id: 'c2', brand: 'Bajaj', model: 'Avenger Cruise 220', year: 2022, kmsDriven: 4200, price: 135000, image: 'https://placehold.co/400x400/94a3b8/ffffff?text=Avenger+220', description: 'Almost new condition, comfortable cruiser for long rides. Single owner.', sellerId: 'u1' },
+            ],
+            sportBikes: [
+              { id: 's1', brand: 'KTM', model: 'RC 200', year: 2020, kmsDriven: 12000, price: 210000, image: 'https://placehold.co/400x400/f97316/ffffff?text=KTM+RC+200', description: 'Track-ready performance bike. Recently serviced with new tires.', sellerId: 'o2' },
+              { id: 's2', brand: 'Yamaha', model: 'R15 V4', year: 2023, kmsDriven: 3000, price: 185000, image: 'https://placehold.co/400x400/3b82f6/ffffff?text=Yamaha+R15', description: 'Latest model with quick-shifter and traction control. Showroom condition.', sellerId: 'o1' },
+            ],
+            commuters: [
+              { id: 'cm1', brand: 'Hero', model: 'Splendor Plus', year: 2022, kmsDriven: 9500, price: 75000, image: 'https://placehold.co/400x400/ef4444/ffffff?text=Splendor', description: 'India\'s favorite commuter. Excellent mileage and low maintenance. First owner.', sellerId: 'u2' },
+              { id: 'cm2', brand: 'Honda', model: 'Shine', year: 2021, kmsDriven: 11000, price: 82000, image: 'https://placehold.co/400x400/4f46e5/ffffff?text=Honda+Shine', description: 'Reliable and smooth 125cc engine. Great for city commuting. All documents clear.', sellerId: 'o2' },
+            ],
+        },
+        forRent: [
+             { id: 'r1', brand: 'TVS', model: 'Ntorq 125', year: 2022, rentalPrice: 800, unit: 'day', image: 'https://placehold.co/400x400/be123c/ffffff?text=Ntorq+125', description: 'Zippy and stylish scooter, perfect for city exploration. Available for daily and weekly rentals.', sellerId: 'o1' },
+             { id: 'r2', brand: 'Royal Enfield', model: 'Himalayan', year: 2021, rentalPrice: 2500, unit: 'day', image: 'https://placehold.co/400x400/57534e/ffffff?text=Himalayan', description: 'Go anywhere adventure bike. Ready for your next trip to the mountains. Helmet and riding gear available.', sellerId: 'o3' },
+             { id: 'r3', brand: 'Honda', model: 'Activa 6G', year: 2023, rentalPrice: 600, unit: 'day', image: 'https://placehold.co/400x400/16a34a/ffffff?text=Activa+6G', description: 'India\'s most trusted scooter. Reliable and fuel-efficient. Perfect for daily errands.', sellerId: 'o2' },
+        ]
+      };
+
+      const MOCK_ORGANISERS_DATA = [
+        { id: 'o1', name: 'Velocity Bikes', rating: 4.8, bikesSold: 124, image: 'https://placehold.co/150x150/3b82f6/ffffff?text=VB' },
+        { id: 'o2', name: 'Rider\'s Point', rating: 4.6, bikesSold: 98, image: 'https://placehold.co/150x150/f97316/ffffff?text=RP' },
+        { id: 'o3', name: 'Moto Hub', rating: 4.5, bikesSold: 75, image: 'https://placehold.co/150x150/22c55e/ffffff?text=MH' },
+      ];
+
+      const MOCK_LEADERBOARD_DATA = [
+        { rank: 1, name: 'Velocity Bikes', sales: 124, type: 'Organiser' },
+        { rank: 2, name: 'Rider\'s Point', sales: 98, type: 'Organiser' },
+        { rank: 3, name: 'Rajesh Kumar', sales: 81, type: 'Individual' },
+        { rank: 4, name: 'Moto Hub', sales: 75, type: 'Organiser' },
+        { rank: 5, name: 'Priya Sharma', sales: 62, type: 'Individual' },
+      ];
+
+      // --- Reusable Modal Component ---
+      const Modal = ({ children, onClose }) => (
+          <div style={styles.modalBackdrop}>
+              <div style={styles.modalContent}>
+                  <button style={styles.modalCloseButton} onClick={onClose}>&times;</button>
+                  {children}
+              </div>
+          </div>
+      );
+
+      // --- COMPONENTS ---
+      const BikeCard = ({ bike, onPress }) => (
+        <div style={styles.productCard} onClick={() => onPress(bike)}>
+          <img src={bike.image} style={styles.productImage} alt={`${bike.brand} ${bike.model}`} onError={(e) => e.target.src = 'https://placehold.co/400x400/cccccc/ffffff?text=Image+Error'} />
+          <div style={styles.productInfo}>
+            <p style={styles.productName}>{bike.brand} {bike.model}</p>
+            <p style={styles.productPrice}>
+                {bike.rentalPrice ? `₹${bike.rentalPrice.toLocaleString('en-IN')} / ${bike.unit}` : `₹${bike.price.toLocaleString('en-IN')}`}
+            </p>
+            {bike.kmsDriven !== undefined && <p style={styles.productSubtext}>{bike.year} - {bike.kmsDriven.toLocaleString('en-IN')} km</p>}
+          </div>
+        </div>
+      );
+      
+      const OrganiserCard = ({ organiser, onPress }) => (
+        <div style={styles.organiserCard} onClick={() => onPress(organiser)}>
+            <img src={organiser.image} style={styles.organiserImage} alt={organiser.name}/>
+            <p style={styles.organiserName}>{organiser.name}</p>
+            <p style={styles.organiserRating}>⭐ {organiser.rating}</p>
+        </div>
+      );
+      
+      const FormattedBotResponse = ({ text }) => {
+        const formatText = (inputText) => {
+            let formattedText = inputText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            formattedText = formattedText.split('\n').map(line => {
+                if (line.trim().startsWith('* ')) { return `<li>${line.trim().substring(2)}</li>`; }
+                return line;
+            }).join('');
+            if (formattedText.includes('<li>')) { formattedText = `<ul>${formattedText}</ul>`; }
+            return formattedText.replace(/\n/g, '<br />');
+        };
+        return <p style={styles.chatText} dangerouslySetInnerHTML={{ __html: formatText(text) }} />;
+      };
+
+      // --- SCREENS ---
+      const LoginScreen = ({ onLogin }) => {
+          const [loginMethod, setLoginMethod] = useState('email');
+          const [identifier, setIdentifier] = useState('');
+          const [password, setPassword] = useState('');
+
+          const handleLogin = (e) => {
+              e.preventDefault();
+              if (identifier && password) {
+                  const user = loginMethod === 'email' ? { email: identifier } : { phone: identifier };
+                  onLogin(user);
+              }
+          };
+
+          return (
+              <div style={styles.loginContainer}>
+                  <h1 style={styles.loginTitle}>Bike Hub</h1>
+                  <div style={styles.loginToggle}>
+                      <button onClick={() => setLoginMethod('email')} style={loginMethod === 'email' ? styles.toggleButtonActive : styles.toggleButton}>Email</button>
+                      <button onClick={() => setLoginMethod('phone')} style={loginMethod === 'phone' ? styles.toggleButtonActive : styles.toggleButton}>Phone</button>
+                  </div>
+                  <form onSubmit={handleLogin} style={styles.loginForm}>
+                      <input type={loginMethod === 'email' ? 'email' : 'tel'} placeholder={loginMethod === 'email' ? 'Email' : 'Phone Number'} value={identifier} onChange={(e) => setIdentifier(e.target.value)} style={styles.loginInput} required />
+                      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} style={styles.loginInput} required />
+                      <button type="submit" style={{...styles.button, ...styles.buyButton, width: '100%'}}>Login</button>
+                  </form>
+              </div>
+          );
+      };
+
+      const HomeScreen = ({ setActiveScreen, setSelectedBike, setSelectedOrganiser, bikes, organisers }) => {
+        const [searchQuery, setSearchQuery] = useState('');
+        const [filteredBikes, setFilteredBikes] = useState(bikes.forSale);
+
+        useEffect(() => {
+          const allBikes = [ ...bikes.forSale.cruisers, ...bikes.forSale.sportBikes, ...bikes.forSale.commuters ];
+          if (searchQuery.trim() === '') {
+            setFilteredBikes(bikes.forSale);
+          } else {
+            const filtered = allBikes.filter(b => `${b.brand} ${b.model}`.toLowerCase().includes(searchQuery.toLowerCase()));
+            setFilteredBikes({
+              cruisers: filtered.filter(b => bikes.forSale.cruisers.includes(b)),
+              sportBikes: filtered.filter(b => bikes.forSale.sportBikes.includes(b)),
+              commuters: filtered.filter(b => bikes.forSale.commuters.includes(b)),
+            });
+          }
+        }, [searchQuery, bikes]);
+
+        const handleBikePress = (bike) => { setSelectedBike(bike); setActiveScreen('BikeDetail'); }
+        const handleOrganiserPress = (organiser) => { setSelectedOrganiser(organiser); setActiveScreen('OrganiserDetail'); }
+
+        return (
+          <div style={styles.screen} className="hide-scrollbar">
+            <div style={styles.header}>
+              <h1 style={styles.headerTitle}>Hello, Rider!</h1>
+              <p style={styles.headerSubtitle}>Find your next second-hand bike</p>
+            </div>
+            <div style={styles.searchContainer}>
+              <SearchIcon />
+              <input type="text" style={styles.searchInput} placeholder="Search for Royal Enfield, KTM..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            </div>
+            <div style={{padding: '0 16px 16px'}}>
+                <button onClick={() => setActiveScreen('Sell')} style={{...styles.button, ...styles.buyButton, width: '100%'}}>+ Sell Your Bike</button>
+            </div>
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Bikes for Rent</h2>
+              <div style={styles.horizontalScroll}>{bikes.forRent.map(item => <BikeCard key={item.id} bike={item} onPress={handleBikePress} />)}</div>
+            </div>
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Top Organisers</h2>
+              <div style={styles.horizontalScroll}>{organisers.map(item => <OrganiserCard key={item.id} organiser={item} onPress={handleOrganiserPress} />)}</div>
+            </div>
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Sport Bikes for Sale</h2>
+              <div style={styles.horizontalScroll}>{filteredBikes.sportBikes.map(item => <BikeCard key={item.id} bike={item} onPress={handleBikePress} />)}</div>
+            </div>
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Cruisers for Sale</h2>
+              <div style={styles.horizontalScroll}>{filteredBikes.cruisers.map(item => <BikeCard key={item.id} bike={item} onPress={handleBikePress} />)}</div>
+            </div>
+            <div style={styles.section}>
+              <h2 style={styles.sectionTitle}>Commuters for Sale</h2>
+              <div style={styles.horizontalScroll}>{filteredBikes.commuters.map(item => <BikeCard key={item.id} bike={item} onPress={handleBikePress} />)}</div>
+            </div>
+          </div>
+        );
+      };
+      
+      const BikeDetailScreen = ({ bike, setActiveScreen, onContact, onShortlist, onRent }) => {
+          if (!bike) { return <div style={styles.screen}><p>No bike selected.</p></div> }
+          return (
+              <div style={styles.screen} className="hide-scrollbar">
+                  <div style={styles.detailHeader}>
+                      <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                      <h2 style={styles.detailTitle}>Bike Details</h2>
+                      <div style={{width: 24}} />
+                  </div>
+                  <img src={bike.image} style={styles.detailImage} alt={`${bike.brand} ${bike.model}`} onError={(e) => e.target.src = 'https://placehold.co/600x400/cccccc/ffffff?text=Image+Error'}/>
+                  <div style={styles.detailInfoContainer}>
+                      <h1 style={styles.detailProductName}>{bike.brand} {bike.model}</h1>
+                      <p style={styles.detailProductPrice}>
+                          {bike.rentalPrice ? `₹${bike.rentalPrice.toLocaleString('en-IN')} / ${bike.unit}` : `₹${bike.price.toLocaleString('en-IN')}`}
+                      </p>
+                      {bike.year && 
+                        <div style={styles.detailSpecs}>
+                          <span><strong>Year:</strong> {bike.year}</span>
+                          {bike.kmsDriven !== undefined && <span><strong>KMs:</strong> {bike.kmsDriven.toLocaleString('en-IN')}</span>}
+                        </div>
+                      }
+                      <p style={styles.detailProductDescription}>{bike.description}</p>
+                  </div>
+                  <div style={styles.buttonContainer}>
+                      <button style={{...styles.button, ...styles.rentButton}} onClick={() => onShortlist(bike)}>⭐ Add to Shortlist</button>
+                      {bike.rentalPrice ? (
+                          <button style={{...styles.button, ...styles.buyButton}} onClick={() => onRent(bike)}>Rent Now</button>
+                      ) : (
+                          <button style={{...styles.button, ...styles.buyButton}} onClick={() => onContact(bike)}>📞 Contact Seller</button>
+                      )}
+                  </div>
+              </div>
+          )
+      }
+
+      const OrganiserDetailScreen = ({ organiser, allBikes, setActiveScreen, setSelectedBike }) => {
+        if (!organiser) { return <div style={styles.screen}><p>No organiser selected.</p></div> }
+
+        const allSaleBikes = [...allBikes.forSale.cruisers, ...allBikes.forSale.sportBikes, ...allBikes.forSale.commuters];
+        const allRentBikes = allBikes.forRent;
+        const organiserBikes = [...allSaleBikes, ...allRentBikes].filter(bike => bike.sellerId === organiser.id);
+        const handleBikePress = (bike) => { setSelectedBike(bike); setActiveScreen('BikeDetail'); }
+
+        return (
+            <div style={styles.screen} className="hide-scrollbar">
+                <div style={styles.detailHeader}>
+                    <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                    <h2 style={styles.detailTitle}>{organiser.name}</h2>
+                    <div style={{width: 24}} />
+                </div>
+                <div style={styles.profileContainer}>
+                    <img src={organiser.image} style={styles.profileImage} alt={organiser.name}/>
+                    <h2 style={styles.profileName}>{organiser.name}</h2>
+                    <p style={styles.profileEmail}>⭐ {organiser.rating} | {organiser.bikesSold} Bikes Sold</p>
+                </div>
+                <h3 style={styles.sectionTitle}>Bikes from {organiser.name}</h3>
+                <div style={styles.gridContainer}>
+                    {organiserBikes.length > 0 ? organiserBikes.map(bike => (
+                        <BikeCard key={bike.id} bike={bike} onPress={handleBikePress} />
+                    )) : <p style={{padding: '0 16px', color: '#9ca3af'}}>This organiser has no bikes listed currently.</p>}
+                </div>
+            </div>
+        );
+      }
+
+      const ChatbotScreen = ({ setActiveScreen }) => {
+        const [messages, setMessages] = useState([
+          { id: 1, text: 'Hello! I am BikeBot. Ask me anything about buying, selling, or maintaining second-hand bikes.', sender: 'bot' },
+        ]);
+        const [input, setInput] = useState('');
+        const [isLoading, setIsLoading] = useState(false);
+        const chatAreaRef = useRef(null);
+
+        useEffect(() => {
+            if (chatAreaRef.current) { chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight; }
+        }, [messages]);
+
+        const getApiResponse = async (prompt, history) => {
+            setIsLoading(true);
+            const systemInstruction = "You are an expert on second-hand motorcycles in India. Provide clear, concise advice. Format responses with lists where applicable, using asterisks for bullet points.";
+            const chatHistory = history.slice(1).map(msg => ({ role: msg.sender === 'bot' ? 'model' : 'user', parts: [{ text: msg.text }] }));
+            chatHistory.unshift({ role: 'user', parts: [{ text: systemInstruction }]});
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+
+            const payload = { contents: chatHistory };
+            const apiKey = "AIzaSyCdLyL7kysPnFzBwpqA1BFXGdIiJELhLCQ";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            try {
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!response.ok) throw new Error(`API call failed: ${response.status}`);
+                const result = await response.json();
+                return result.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                return "Error connecting to the AI. Please try again.";
+            } finally { setIsLoading(false); }
+        };
+
+        const handleSend = async () => {
+          if (input.trim() === '') return;
+          const newMessages = [...messages, { id: Date.now(), text: input, sender: 'user' }];
+          setMessages(newMessages);
+          const userMessage = input;
+          setInput('');
+          const botResponse = await getApiResponse(userMessage, newMessages);
+          setMessages(prev => [...prev, { id: Date.now() + 1, text: botResponse, sender: 'bot' }]);
+        };
+        
+        return (
+            <div style={{...styles.screen, display: 'flex', flexDirection: 'column'}}>
+              <div style={styles.detailHeader}>
+                  <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                  <h2 style={styles.detailTitle}>AI Bike Assistant</h2>
+                  <div style={{width: 24}} />
+              </div>
+              <div ref={chatAreaRef} style={styles.chatArea} className="hide-scrollbar">
+                {messages.map(item => (
+                  <div key={item.id} style={{...styles.chatBubble, ...(item.sender === 'user' ? styles.userBubble : styles.botBubble)}}>
+                    {item.sender === 'bot' ? <FormattedBotResponse text={item.text} /> : <p style={styles.chatText}>{item.text}</p>}
+                  </div>
+                ))}
+                {isLoading && <div style={{...styles.chatBubble, ...styles.botBubble}}><p style={styles.chatText}>Thinking...</p></div>}
+              </div>
+              <div style={styles.chatInputContainer}>
+                <input type="text" style={styles.chatInput} value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Ask about bike maintenance..." />
+                <button style={{...styles.iconButton, ...styles.sendButton}} onClick={handleSend} disabled={isLoading || input.trim() === ''}><SendIcon /></button>
+              </div>
+            </div>
+        );
+      };
+
+      const ShortlistScreen = ({ shortlistItems, setActiveScreen }) => (
+          <div style={{...styles.screen, display: 'flex', flexDirection: 'column'}}>
+              <div style={styles.detailHeader}>
+                  <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                  <h2 style={styles.detailTitle}>Your Shortlist</h2>
+                  <div style={{width: 24}} />
+              </div>
+              {shortlistItems.length === 0 ? (
+                  <div style={styles.centered}><p>Your shortlist is empty.</p></div>
+              ) : (
+                  <div style={{flex: 1, overflowY: 'auto'}} className="hide-scrollbar">
+                      {shortlistItems.map((item, index) => (
+                          <div key={item.id + index} style={styles.cartItem}>
+                              <img src={item.image} style={styles.cartItemImage} alt={`${item.brand} ${item.model}`} />
+                              <div style={styles.cartItemInfo}>
+                                  <p style={styles.cartItemName}>{item.brand} {item.model}</p>
+                                  <p style={styles.cartItemPrice}>
+                                      {item.rentalPrice ? `₹${item.rentalPrice.toLocaleString('en-IN')} / ${item.unit}` : `₹${item.price.toLocaleString('en-IN')}`}
+                                  </p>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              )}
+          </div>
+      );
+
+      const LeaderboardScreen = ({ leaderboardData, setActiveScreen }) => (
+          <div style={{...styles.screen, display: 'flex', flexDirection: 'column'}}>
+              <div style={styles.detailHeader}>
+                  <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                  <h2 style={styles.detailTitle}>Top Sellers</h2>
+                  <div style={{width: 24}} />
+              </div>
+              <div style={{flex: 1, overflowY: 'auto', padding: '8px'}} className="hide-scrollbar">
+                  {leaderboardData.map(seller => (
+                      <div key={seller.rank} style={styles.leaderboardItem}>
+                          <span style={styles.leaderboardRank}>{seller.rank}</span>
+                          <div style={styles.leaderboardInfo}>
+                              <p style={styles.leaderboardName}>{seller.name}</p>
+                              <p style={styles.leaderboardType}>{seller.type}</p>
+                          </div>
+                          <span style={styles.leaderboardSales}>{seller.sales} sales</span>
+                      </div>
+                  ))}
+              </div>
+          </div>
+      );
+
+      const ProfileScreen = ({ user, setActiveScreen, onLogout }) => (
+          <div style={styles.screen}>
+               <div style={styles.detailHeader}>
+                  <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                  <h2 style={styles.detailTitle}>Profile & Support</h2>
+                  <div style={{width: 24}} />
+              </div>
+              <div style={styles.profileContainer}>
+                  <img src={'https://placehold.co/100x100/f97316/ffffff?text=Rider'} style={styles.profileImage} alt="Profile"/>
+                  <h2 style={styles.profileName}>{user.email || user.phone}</h2>
+                  <p style={styles.profileEmail}>Bike Enthusiast</p>
+              </div>
+              <div style={styles.supportSection}>
+                  <h3 style={styles.sectionTitle}>Customer Support</h3>
+                  <div style={styles.supportItem}><p>📞 Phone Support: 1800-BIKE-HUB</p></div>
+                   <div style={styles.supportItem}><p>✉️ Email Support: support@bikehub.com</p></div>
+              </div>
+              <div style={{padding: '16px'}}>
+                <button onClick={onLogout} style={{...styles.button, ...styles.logoutButton, width: '100%'}}>Logout</button>
+              </div>
+          </div>
+      );
+
+      const SellScreen = ({ setActiveScreen, addBike }) => {
+          const [step, setStep] = useState(1);
+          const [bikeData, setBikeData] = useState({ type: '', image: '' });
+          const [newBike, setNewBike] = useState(null);
+
+          const handleDetailSubmit = (e) => {
+              e.preventDefault();
+              const { brand, model, year, kmsDriven, price, rentalPrice, description } = e.target.elements;
+              if (!brand.value || !model.value || !year.value || !kmsDriven.value || !description.value || (!price.value && !rentalPrice.value)) { 
+                  // In a real app, show a proper error message
+                  return; 
+              }
+              const createdBike = {
+                  id: `${bikeData.type.charAt(0)}${Date.now()}`, brand: brand.value, model: model.value, year: parseInt(year.value), 
+                  kmsDriven: parseInt(kmsDriven.value), description: description.value, image: bikeData.image, sellerId: 'currentUser',
+                  price: price.value ? parseFloat(price.value) : null,
+                  rentalPrice: rentalPrice.value ? parseFloat(rentalPrice.value) : null,
+                  unit: rentalPrice.value ? 'day' : null,
+              };
+              setNewBike(createdBike);
+              setStep(4); // Move to ad fee step
+          };
+          
+          const handleAdFeePayment = () => {
+              // Simulate payment success
+              addBike(newBike, bikeData.type);
+              setActiveScreen('Home');
+          };
+
+          return (
+              <div style={styles.screen}>
+                  <div style={styles.detailHeader}>
+                      <button style={styles.iconButton} onClick={() => setActiveScreen('Home')}><BackIcon /></button>
+                      <h2 style={styles.detailTitle}>Sell Your Bike</h2>
+                      <div style={{width: 24}} />
+                  </div>
+                  <div style={{padding: '16px'}}>
+                      {step === 1 && (
+                          <div>
+                              <h3>Step 1: Select Bike Type</h3>
+                              <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px'}}>
+                                  <button onClick={() => { setBikeData(p => ({...p, type: 'sportBikes'})); setStep(2); }} style={{...styles.button, ...styles.buyButton}}>Sport Bike</button>
+                                  <button onClick={() => { setBikeData(p => ({...p, type: 'cruisers'})); setStep(2); }} style={{...styles.button, ...styles.buyButton}}>Cruiser</button>
+                                  <button onClick={() => { setBikeData(p => ({...p, type: 'commuters'})); setStep(2); }} style={{...styles.button, ...styles.buyButton}}>Commuter</button>
+                              </div>
+                          </div>
+                      )}
+                      {step === 2 && (
+                          <div>
+                              <h3>Step 2: Take a Photo</h3>
+                              <div style={styles.cameraView}><CameraIcon /><p>Camera view placeholder</p></div>
+                              <button onClick={() => { setBikeData(p => ({...p, image: 'https://placehold.co/400x400/fbbf24/ffffff?text=New+Bike'})); setStep(3); }} style={{...styles.button, ...styles.buyButton, marginTop: '20px', width: '100%'}}>Capture Photo</button>
+                          </div>
+                      )}
+                      {step === 3 && (
+                          <div>
+                              <h3>Step 3: Enter Bike Details</h3>
+                              <form onSubmit={handleDetailSubmit} style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px'}}>
+                                  <input name="brand" type="text" placeholder="Brand (e.g., Royal Enfield)" style={styles.loginInput} required />
+                                  <input name="model" type="text" placeholder="Model (e.g., Classic 350)" style={styles.loginInput} required />
+                                  <input name="year" type="number" placeholder="Year of Manufacture" style={styles.loginInput} required />
+                                  <input name="kmsDriven" type="number" placeholder="Kilometers Driven" style={styles.loginInput} required />
+                                  <input name="price" type="number" placeholder="Selling Price (₹)" style={styles.loginInput} />
+                                  <input name="rentalPrice" type="number" placeholder="Rental Price per Day (₹)" style={styles.loginInput} />
+                                  <p style={{fontSize: '12px', color: '#9ca3af'}}>Fill at least one price.</p>
+                                  <textarea name="description" placeholder="Description (condition, features, etc.)" style={{...styles.loginInput, height: '80px'}} required />
+                                  <button type="submit" style={{...styles.button, ...styles.buyButton}}>Proceed to Ad Fee</button>
+                              </form>
+                          </div>
+                      )}
+                      {step === 4 && (
+                          <div>
+                              <h3>Step 4: Ad Fee Payment</h3>
+                              <div style={styles.adFeeContainer}>
+                                  <p>To make your listing visible to thousands of potential buyers, a one-time, non-refundable ad fee is required.</p>
+                                  <p style={styles.adFeeAmount}>Fee: ₹99</p>
+                                  <button onClick={handleAdFeePayment} style={{...styles.button, ...styles.buyButton, width: '100%'}}>Pay and List Your Bike</button>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          );
+      };
+
+      // --- MAIN APP COMPONENT ---
+      function App() {
+        const [isLoggedIn, setIsLoggedIn] = useState(false);
+        const [currentUser, setCurrentUser] = useState(null);
+        const [activeScreen, setActiveScreen] = useState('Home');
+        const [selectedBike, setSelectedBike] = useState(null);
+        const [selectedOrganiser, setSelectedOrganiser] = useState(null);
+        const [shortlistItems, setShortlistItems] = useState([]);
+        const [activeModal, setActiveModal] = useState(null);
+        const [contactBike, setContactBike] = useState(null);
+        const [rentalBike, setRentalBike] = useState(null);
+        const [bikes, setBikes] = useState(MOCK_BIKES_DATA);
+        
+        const handleLogin = (user) => { setCurrentUser(user); setIsLoggedIn(true); };
+        const handleLogout = () => { setCurrentUser(null); setIsLoggedIn(false); setShortlistItems([]); };
+        const addBike = (bike, type) => { 
+            if (bike.price) { // It's for sale
+                setBikes(prev => ({ ...prev, forSale: { ...prev.forSale, [type]: [bike, ...prev.forSale[type]] } })); 
+            } else { // It's for rent
+                setBikes(prev => ({ ...prev, forRent: [bike, ...prev.forRent] }));
+            }
+        };
+        const handleContact = (bike) => { setContactBike(bike); setActiveModal('contact'); };
+        const handleRent = (bike) => { setRentalBike(bike); setActiveModal('rent'); };
+        const handleShortlist = (bike) => { if (!shortlistItems.find(item => item.id === bike.id)) { setShortlistItems(prev => [...prev, bike]); } };
+
+        const handleRentalSubmit = (e) => {
+            e.preventDefault();
+            const rentalDays = e.target.elements.days.value;
+            if (rentalDays > 0) {
+                const total = rentalBike.rentalPrice * rentalDays;
+                // In a real app, you would proceed to a payment gateway. Here we simulate success.
+                setActiveModal(null);
+                alert(`Booking successful for ${rentalDays} days! Total: ₹${total.toLocaleString('en-IN')}`);
+            }
+        };
+
+        if (!isLoggedIn) { return <LoginScreen onLogin={handleLogin} />; }
+
+        const renderScreen = () => {
+          switch (activeScreen) {
+            case 'Home': return <HomeScreen bikes={bikes} organisers={MOCK_ORGANISERS_DATA} setActiveScreen={setActiveScreen} setSelectedBike={setSelectedBike} setSelectedOrganiser={setSelectedOrganiser} />;
+            case 'BikeDetail': return <BikeDetailScreen bike={selectedBike} setActiveScreen={setActiveScreen} onContact={handleContact} onShortlist={handleShortlist} onRent={handleRent} />;
+            case 'OrganiserDetail': return <OrganiserDetailScreen organiser={selectedOrganiser} allBikes={bikes} setActiveScreen={setActiveScreen} setSelectedBike={setSelectedBike} />;
+            case 'Chatbot': return <ChatbotScreen setActiveScreen={setActiveScreen} />;
+            case 'Shortlist': return <ShortlistScreen shortlistItems={shortlistItems} setActiveScreen={setActiveScreen} />;
+            case 'Leaderboard': return <LeaderboardScreen leaderboardData={MOCK_LEADERBOARD_DATA} setActiveScreen={setActiveScreen} />;
+            case 'Profile': return <ProfileScreen user={currentUser} setActiveScreen={setActiveScreen} onLogout={handleLogout} />;
+            case 'Sell': return <SellScreen setActiveScreen={setActiveScreen} addBike={addBike} />;
+            default: return <HomeScreen bikes={bikes} organisers={MOCK_ORGANISERS_DATA} setActiveScreen={setActiveScreen} setSelectedBike={setSelectedBike} setSelectedOrganiser={setSelectedOrganiser} />;
+          }
+        };
+
+        const getNavIconStyle = (screenName) => activeScreen === screenName ? {...styles.navButton, ...styles.navButtonActive} : styles.navButton;
+
+        return (
+          <React.Fragment>
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>{renderScreen()}</div>
+            {activeModal === 'contact' && (
+                <Modal onClose={() => setActiveModal(null)}>
+                    <h2>Seller Information</h2>
+                    <p>You can contact the seller for the <strong>{contactBike.brand} {contactBike.model}</strong> using the details below:</p>
+                    <div style={styles.supportItem}><p><strong>Name:</strong> Alex Ray (Mock)</p></div>
+                    <div style={styles.supportItem}><p><strong>Phone:</strong> +91 98765 43210</p></div>
+                </Modal>
+            )}
+            {activeModal === 'rent' && (
+                <Modal onClose={() => setActiveModal(null)}>
+                    <h2>Rent This Bike</h2>
+                    <p><strong>{rentalBike.brand} {rentalBike.model}</strong></p>
+                    <p>Price: ₹{rentalBike.rentalPrice}/day</p>
+                    <form onSubmit={handleRentalSubmit}>
+                        <input name="days" type="number" placeholder="Enter number of days" style={styles.loginInput} min="1" required/>
+                        <button type="submit" style={{...styles.button, ...styles.buyButton, marginTop: '10px'}}>Confirm Booking</button>
+                    </form>
+                </Modal>
+            )}
+            <div style={styles.navBar}>
+              <button style={getNavIconStyle('Home')} onClick={() => setActiveScreen('Home')}><HomeIcon /><p style={styles.navText}>Home</p></button>
+              <button style={getNavIconStyle('Chatbot')} onClick={() => setActiveScreen('Chatbot')}><ChatIcon /><p style={styles.navText}>AI Help</p></button>
+              <button style={getNavIconStyle('Shortlist')} onClick={() => setActiveScreen('Shortlist')}><StarIcon count={shortlistItems.length} /><p style={styles.navText}>Shortlist</p></button>
+              <button style={getNavIconStyle('Leaderboard')} onClick={() => setActiveScreen('Leaderboard')}><LeaderboardIcon /><p style={styles.navText}>Top Sellers</p></button>
+              <button style={getNavIconStyle('Profile')} onClick={() => setActiveScreen('Profile')}><ProfileIcon /><p style={styles.navText}>Profile</p></button>
+            </div>
+          </React.Fragment>
+        );
+      }
+
+      // --- STYLES ---
+      const styles = {
+        screen: { flex: 1, overflowY: 'auto', backgroundColor: '#1f2937' },
+        centered: { flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' },
+        header: { padding: '16px' },
+        headerTitle: { fontSize: '28px', fontWeight: 'bold', color: '#f9fafb', margin: 0 },
+        headerSubtitle: { fontSize: '16px', color: '#9ca3af', margin: '4px 0 0 0' },
+        searchContainer: { display: 'flex', alignItems: 'center', backgroundColor: '#374151', borderRadius: '999px', padding: '8px', margin: '0 16px 16px' },
+        searchInput: { flex: 1, margin: '0 8px', fontSize: '16px', border: 'none', outline: 'none', backgroundColor: 'transparent', color: '#f9fafb' },
+        icon: { fontSize: '20px', color: '#d1d5db' },
+        iconButton: { backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: '8px' },
+        section: { marginBottom: '24px' },
+        sectionTitle: { fontSize: '20px', fontWeight: 'bold', margin: '0 16px 8px', color: '#e5e7eb' },
+        horizontalScroll: { display: 'flex', overflowX: 'auto', padding: '0 8px 16px 8px' },
+        productCard: { backgroundColor: '#374151', borderRadius: '8px', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', overflow: 'hidden', width: '160px', margin: '0 8px', flexShrink: 0, cursor: 'pointer' },
+        productImage: { width: '100%', height: '128px', objectFit: 'cover' },
+        productInfo: { padding: '8px' },
+        productName: { fontSize: '14px', fontWeight: 'bold', margin: 0, color: '#f9fafb' },
+        productPrice: { fontSize: '16px', color: '#f97316', marginTop: '4px', margin: 0, fontWeight: 'bold' },
+        productSubtext: { fontSize: '12px', color: '#9ca3af', marginTop: '4px', margin: 0 },
+        organiserCard: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: '#374151', borderRadius: '8px', padding: '16px', width: '120px', margin: '0 8px', flexShrink: 0, cursor: 'pointer' },
+        organiserImage: { width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', marginBottom: '8px' },
+        organiserName: { fontSize: '14px', fontWeight: 'bold', color: '#f9fafb', margin: 0, textAlign: 'center' },
+        organiserRating: { fontSize: '12px', color: '#d1d5db', margin: '4px 0 0 0' },
+        navBar: { display: 'flex', justifyContent: 'space-around', backgroundColor: '#111827', borderTop: '1px solid #374151', padding: '8px 0' },
+        navButton: { display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '8px', width: '70px', color: '#f97316' },
+        navButtonActive: { backgroundColor: '#374151' },
+        navIcon: { fontSize: '24px' },
+        navText: { fontSize: '12px', margin: 0 },
+        cartBadge: { position: 'absolute', top: -5, right: -5, backgroundColor: '#ef4444', color: 'white', borderRadius: '50%', padding: '2px 6px', fontSize: '10px', fontWeight: 'bold' },
+        detailHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px' },
+        detailTitle: { fontSize: '20px', fontWeight: 'bold', margin: 0, color: '#f9fafb' },
+        detailImage: { width: '100%', height: '250px', objectFit: 'cover' },
+        detailInfoContainer: { padding: '16px' },
+        detailProductName: { fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0', color: '#f9fafb' },
+        detailProductPrice: { fontSize: '22px', color: '#f97316', marginBottom: '16px', margin: 0, fontWeight: 'bold' },
+        detailSpecs: { display: 'flex', gap: '20px', marginBottom: '16px', color: '#d1d5db' },
+        detailProductDescription: { fontSize: '16px', color: '#d1d5db', lineHeight: 1.5, margin: 0 },
+        buttonContainer: { display: 'flex', justifyContent: 'space-around', margin: '16px' },
+        button: { flex: 1, padding: '16px', borderRadius: '8px', alignItems: 'center', margin: '0 8px', border: 'none', color: 'white', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer' },
+        rentButton: { backgroundColor: '#4f46e5' },
+        buyButton: { backgroundColor: '#f97316' },
+        logoutButton: { backgroundColor: '#ef4444' },
+        chatArea: { flex: 1, padding: '10px', overflowY: 'auto', display: 'flex', flexDirection: 'column' },
+        chatBubble: { maxWidth: '80%', padding: '12px', borderRadius: '16px', marginBottom: '10px', wordWrap: 'break-word' },
+        userBubble: { backgroundColor: '#f97316', color: 'white', alignSelf: 'flex-end' },
+        botBubble: { backgroundColor: '#4b5563', color: '#f3f4f6', alignSelf: 'flex-start' },
+        chatText: { margin: 0, lineHeight: 1.5 },
+        chatInputContainer: { display: 'flex', alignItems: 'center', padding: '8px', borderTop: '1px solid #374151', backgroundColor: '#1f2937' },
+        chatInput: { flex: 1, backgroundColor: '#374151', color: '#f9fafb', borderRadius: '20px', padding: '10px 16px', border: 'none', outline: 'none' },
+        sendButton: { backgroundColor: '#f97316', color: 'white', borderRadius: '50%', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '8px' },
+        cartItem: { display: 'flex', backgroundColor: '#374151', padding: '12px', margin: '4px 8px', borderRadius: '8px', alignItems: 'center' },
+        cartItemImage: { width: '60px', height: '60px', borderRadius: '8px', objectFit: 'cover' },
+        cartItemInfo: { flex: 1, marginLeft: '12px' },
+        cartItemName: { fontSize: '16px', fontWeight: 'bold', margin: 0, color: '#f9fafb' },
+        cartItemPrice: { fontSize: '14px', color: '#f97316', margin: '2px 0 0 0' },
+        profileContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' },
+        profileImage: { width: '100px', height: '100px', borderRadius: '50%', marginBottom: '12px' },
+        profileName: { fontSize: '22px', fontWeight: 'bold', margin: 0, color: '#f9fafb' },
+        profileEmail: { fontSize: '16px', color: '#9ca3af', margin: '4px 0 0 0' },
+        supportSection: { padding: '0 16px' },
+        supportItem: { backgroundColor: '#374151', padding: '16px', borderRadius: '8px', marginBottom: '8px' },
+        loginContainer: { flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '20px', backgroundColor: '#1f2937' },
+        loginTitle: { fontSize: '32px', fontWeight: 'bold', color: '#f97316', marginBottom: '20px' },
+        loginToggle: { display: 'flex', marginBottom: '20px', border: '1px solid #4b5563', borderRadius: '8px', overflow: 'hidden' },
+        toggleButton: { padding: '10px 20px', border: 'none', backgroundColor: '#374151', color: '#f3f4f6', cursor: 'pointer', fontSize: '16px' },
+        toggleButtonActive: { padding: '10px 20px', border: 'none', backgroundColor: '#f97316', color: 'white', cursor: 'pointer', fontSize: '16px' },
+        loginForm: { width: '100%', maxWidth: '350px', display: 'flex', flexDirection: 'column', gap: '15px' },
+        loginInput: { padding: '15px', fontSize: '16px', borderRadius: '8px', border: '1px solid #4b5563', backgroundColor: '#374151', color: '#f9fafb' },
+        modalBackdrop: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
+        modalContent: { backgroundColor: '#374151', color: '#f9fafb', padding: '20px', borderRadius: '8px', width: '90%', maxWidth: '400px', position: 'relative' },
+        modalCloseButton: { position: 'absolute', top: '10px', right: '10px', backgroundColor: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#f9fafb' },
+        cameraView: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', backgroundColor: '#4b5563', borderRadius: '8px', border: '2px dashed #6b7280', color: '#9ca3af' },
+        gridContainer: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', padding: '16px' },
+        leaderboardItem: { display: 'flex', alignItems: 'center', backgroundColor: '#374151', padding: '12px', borderRadius: '8px', marginBottom: '8px' },
+        leaderboardRank: { fontSize: '20px', fontWeight: 'bold', color: '#f97316', width: '40px', textAlign: 'center' },
+        leaderboardInfo: { flex: 1, marginLeft: '12px' },
+        leaderboardName: { fontSize: '16px', fontWeight: 'bold', margin: 0, color: '#f9fafb' },
+        leaderboardType: { fontSize: '12px', color: '#9ca3af', margin: '2px 0 0 0' },
+        leaderboardSales: { fontSize: '14px', fontWeight: 'bold', color: '#e5e7eb' },
+        adFeeContainer: { backgroundColor: '#374151', padding: '20px', borderRadius: '8px', textAlign: 'center' },
+        adFeeAmount: { fontSize: '28px', fontWeight: 'bold', color: '#f97316', margin: '10px 0 20px 0' },
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+</body>
+</html>
